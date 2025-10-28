@@ -1,6 +1,6 @@
 // ===== Song Bingo Config =====
-const ROWS = 3;
-const COLS = 4;
+const ROWS = 4;
+const COLS = 3;
 const CARD_COUNT = 500;
 const SONGS = (window.SONGS || []).filter(Boolean);
 
