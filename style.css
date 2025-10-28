@@ -74,7 +74,7 @@ button:active { transform: translateY(0); }
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: clamp(18px, 5vw, 28px);
+  font-size: clamp(12px, 3.2vw, 16px);
   color: var(--ink);
   border-radius: 12px;
   border: 1px solid #2b3140;
