@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bingo 1–31 (4×5)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="wrap">
+    <h1>🎉 Bingo (1–31)</h1>
+    <p class="sub">4×5 cards • 30 unique boards • tap to mark</p>
+  </header>
+
+  <main class="wrap">
+    <section class="controls">
+      <button id="randomBtn" type="button">🎲 Random Card</button>
+      <button id="prevBtn" type="button" aria-label="Previous card">◀️</button>
+      <span id="cardLabel" aria-live="polite">Card —</span>
+      <button id="nextBtn" type="button" aria-label="Next card">▶️</button>
+      <button id="resetBtn" type="button" title="Clear marks on this card">🧹 Reset</button>
+      <button id="shareBtn" type="button" title="Copy a URL for this card">🔗 Share</button>
+    </section>
+
+    <section id="board" class="board" role="grid" aria-label="Bingo card"></section>
+
+    <details class="wrap info">
+      <summary>How it works</summary>
+      <ul>
+        <li>30 unique 4×5 cards using numbers 1–31.</li>
+        <li>No repeats inside a card; all cards are unique.</li>
+        <li>Open <code>?card=0</code> to <code>?card=29</code> to pick a specific card.</li>
+        <li>Your taps are saved locally, so refresh won’t lose marks.</li>
+      </ul>
+    </details>
+  </main>
+
+  <footer class="wrap foot">
+    <small>Made for friends 🎯</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
