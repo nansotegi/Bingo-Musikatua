@@ -1,8 +1,8 @@
 // Config
-const ROWS = 4;
-const COLS = 5;
+const ROWS = 3;
+const COLS = 4;
 const MAX_NUM = 31;
-const CARD_COUNT = 30;
+const CARD_COUNT = 500;
 
 // --- Utility: RNG + helpers
 const randInt = (n) => Math.floor(Math.random() * n);
