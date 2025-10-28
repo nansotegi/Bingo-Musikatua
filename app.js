@@ -1,152 +1,122 @@
-// Config
+// ===== Song Bingo Config =====
 const ROWS = 3;
 const COLS = 4;
-const MAX_NUM = 31;
 const CARD_COUNT = 500;
+const SONGS = (window.SONGS || []).filter(Boolean);
 
-// --- Utility: RNG + helpers
+if (SONGS.length < ROWS * COLS) {
+  alert(`You need at least ${ROWS * COLS} unique songs. Currently ${SONGS.length}.`);
+}
+
 const randInt = (n) => Math.floor(Math.random() * n);
-
-function sampleUnique(rangeMax, k) {
-  // Returns k distinct ints from 1..rangeMax
-  if (k > rangeMax) throw new Error("k cannot exceed range");
-  const pool = Array.from({ length: rangeMax }, (_, i) => i + 1);
-  // Fisher–Yates partial shuffle
+function sampleUnique(arr, k) {
+  const copy = arr.slice();
   for (let i = 0; i < k; i++) {
-    const j = i + randInt(pool.length - i);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+    const j = i + randInt(copy.length - i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
-  return pool.slice(0, k);
+  return copy.slice(0, k);
 }
+const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length/n) }, (_, i) => arr.slice(i*n, i*n+n));
+const flatten = (m) => m.flat();
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
-function flatten(matrix) {
-  return matrix.flat();
-}
-
-// --- Card generation
 function makeCard() {
-  const picks = sampleUnique(MAX_NUM, ROWS * COLS);
-  // Optional shuffle for more layout variety
+  const picks = sampleUnique(SONGS, ROWS * COLS);
   for (let i = picks.length - 1; i > 0; i--) {
     const j = randInt(i + 1);
     [picks[i], picks[j]] = [picks[j], picks[i]];
   }
   return chunk(picks, COLS);
 }
-
-function generateUniqueCards(count = CARD_COUNT) {
+function generateUniqueCards(count) {
   const seen = new Set();
   const cards = [];
   while (cards.length < count) {
-    const m = makeCard();
-    const key = flatten(m).join(",");
+    const card = makeCard();
+    const key = flatten(card).join('|');
     if (!seen.has(key)) {
       seen.add(key);
-      cards.push(m);
+      cards.push(card);
     }
   }
   return cards;
 }
 
-// --- State
 const cards = generateUniqueCards(CARD_COUNT);
-let currentIndex = 0; // 0..CARD_COUNT-1
+let currentIndex = 0;
 
-// URL param support: ?card=0..29
 const params = new URLSearchParams(location.search);
 if (params.has("card")) {
-  const idx = parseInt(params.get("card"), 10);
-  if (!Number.isNaN(idx) && idx >= 0 && idx < CARD_COUNT) currentIndex = idx;
+  const n = parseInt(params.get("card"), 10);
+  if (!Number.isNaN(n) && n >= 0 && n < CARD_COUNT) currentIndex = n;
 }
 
-// Persist marks per (card index) in localStorage
-function storageKeyForCard(idx) {
-  return `bingo-marks-${ROWS}x${COLS}-max${MAX_NUM}-card${idx}`;
+function storageKey(i) {
+  return `song-bingo-${ROWS}x${COLS}-card${i}`;
 }
-function loadMarks(idx) {
-  try {
-    const raw = localStorage.getItem(storageKeyForCard(idx));
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch { return new Set(); }
+function loadMarks(i) {
+  try { return new Set(JSON.parse(localStorage.getItem(storageKey(i))) || []); }
+  catch { return new Set(); }
 }
-function saveMarks(idx, set) {
-  try {
-    localStorage.setItem(storageKeyForCard(idx), JSON.stringify([...set]));
-  } catch {}
+function saveMarks(i, s) {
+  localStorage.setItem(storageKey(i), JSON.stringify([...s]));
 }
 
-// --- Rendering
 const boardEl = document.getElementById("board");
 const labelEl = document.getElementById("cardLabel");
 
-function renderCard(idx) {
-  const card = cards[idx];
-  const marks = loadMarks(idx);
+function renderCard(i) {
+  const card = cards[i];
+  const marks = loadMarks(i);
   boardEl.innerHTML = "";
-  labelEl.textContent = `Card ${idx + 1} / ${CARD_COUNT}`;
+  labelEl.textContent = `Card ${i + 1} / ${CARD_COUNT}`;
 
-  flatten(card).forEach((num, i) => {
+  flatten(card).forEach((song, idx) => {
     const cell = document.createElement("button");
     cell.className = "cell";
-    cell.setAttribute("role", "gridcell");
-    cell.setAttribute("aria-label", `Number ${num}`);
-    cell.textContent = num;
-
-    if (marks.has(i)) cell.classList.add("marked");
-
+    cell.innerHTML = `<span class="song">${escapeHtml(song)}</span>`;
+    if (marks.has(idx)) cell.classList.add("marked");
     cell.addEventListener("click", () => {
-      if (cell.classList.toggle("marked")) marks.add(i);
-      else marks.delete(i);
-      saveMarks(idx, marks);
+      if (cell.classList.toggle("marked")) marks.add(idx);
+      else marks.delete(idx);
+      saveMarks(i, marks);
     });
-
     boardEl.appendChild(cell);
   });
 
-  // Keep query param synced for easy sharing
   const url = new URL(location.href);
-  url.searchParams.set("card", idx.toString());
+  url.searchParams.set("card", i.toString());
   history.replaceState({}, "", url);
 }
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
 
-function goTo(idx) {
-  currentIndex = (idx + CARD_COUNT) % CARD_COUNT;
+function goTo(i) {
+  currentIndex = (i + CARD_COUNT) % CARD_COUNT;
   renderCard(currentIndex);
 }
 
-// --- Controls
-document.getElementById("prevBtn").addEventListener("click", () => goTo(currentIndex - 1));
-document.getElementById("nextBtn").addEventListener("click", () => goTo(currentIndex + 1));
-document.getElementById("randomBtn").addEventListener("click", () => goTo(randInt(CARD_COUNT)));
-
-document.getElementById("resetBtn").addEventListener("click", () => {
-  localStorage.removeItem(storageKeyForCard(currentIndex));
+document.getElementById("prevBtn").onclick = () => goTo(currentIndex - 1);
+document.getElementById("nextBtn").onclick = () => goTo(currentIndex + 1);
+document.getElementById("randomBtn").onclick = () => goTo(randInt(CARD_COUNT));
+document.getElementById("resetBtn").onclick = () => {
+  localStorage.removeItem(storageKey(currentIndex));
   renderCard(currentIndex);
-});
-
-document.getElementById("shareBtn").addEventListener("click", async () => {
+};
+document.getElementById("shareBtn").onclick = async () => {
   const url = new URL(location.href);
   url.searchParams.set("card", currentIndex.toString());
   const shareUrl = url.toString();
-
   try {
-    if (navigator.share) {
-      await navigator.share({ title: "Bingo Card", url: shareUrl });
-    } else {
+    if (navigator.share) await navigator.share({ title: "Song Bingo Card", url: shareUrl });
+    else {
       await navigator.clipboard.writeText(shareUrl);
-      alert("Link copied to clipboard!");
+      alert("Link copied!");
     }
   } catch {
-    // Fallback if permissions fail
     prompt("Copy this URL:", shareUrl);
   }
-});
+};
 
-// Initial render
 renderCard(currentIndex);
